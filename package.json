@@ -1,0 +1,33 @@
+{
+  "name": "cf-worker-api-gateway",
+  "version": "0.7.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/day1swhan/cf-worker-api-gateway.git"
+  },
+  "homepage": "https://github.com/day1swhan/cf-worker-api-gateway#readme",
+  "author": "day1swhan",
+  "bugs": {
+    "url": "https://github.com/day1swhan/cf-worker-api-gateway/issues"
+  },
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf .wrangler && rm worker-configuration.d.ts",
+    "types": "wrangler types",
+    "dev": "npm run types && wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "wrangler": "^4.22.0"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "http",
+    "rest",
+    "api",
+    "router",
+    "framework"
+  ]
+}

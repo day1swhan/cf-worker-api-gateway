@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cf-worker-api-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-17",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "KV_STORE_TEST",
+      "id": "xxxxxxxxxx", // 프로덕션용, 배포시 포함되어야됨
+      "preview_id": "123456789" // 이건 로컬용, 아무 의미 없음
+    }
+  ]
+}

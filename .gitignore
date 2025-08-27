@@ -1,0 +1,10 @@
+# Dependency directories
+node_modules/
+
+# wrangler project
+.wrangler/
+worker-configuration.d.ts
+package-lock.json
+
+# custom
+dev/
