@@ -95,6 +95,8 @@ export class WorkerAPIGateway<Env> {
 
     const pathname = normalizePath(path, this.ignoreTrailingSlash);
     const parts = split(pathname);
+    const query = parseQueryString(rawQueryString);
+    const cookie = parseCookie(req.headers.get("cookie") || "");
 
     let methodMismatchAllow: Set<Method> | null = null;
 
@@ -116,8 +118,6 @@ export class WorkerAPIGateway<Env> {
 
       const middlewareStack: Middleware<Env>[] = [...globalChain, ...route.middlewares];
 
-      const query = parseQueryString(rawQueryString);
-      const cookie = parseCookie(req.headers.get("cookie") || "");
       const context: Context<Env> = { env, ctx, params, query, cookie };
       const finalHandler: Handler<Env> = async (req, context) => route.handler(req, context);
       const handler = composeMiddleware<Env>(middlewareStack, finalHandler);
@@ -133,11 +133,10 @@ export class WorkerAPIGateway<Env> {
       }
     }
 
-    const context: Context<Env> = { env, ctx, params: {}, query: {}, cookie: {} };
-    // 404, 405는 전역 미들웨어만 실행
     const middlewareStack: Middleware<Env>[] = this.middlewareStack
-      .filter((o) => pathnameStartsWith("/", o.prefix))
-      .flatMap((o) => o.middlewares);
+      .filter((mw) => pathnameStartsWith(pathname, mw.prefix))
+      .sort((a, b) => a.prefix.length - b.prefix.length)
+      .flatMap((mw) => mw.middlewares);
 
     let finalHandler: Handler<Env> = async (req, context) => {
       const body = { message: "Not Found" };
@@ -152,6 +151,7 @@ export class WorkerAPIGateway<Env> {
       };
     }
 
+    const context: Context<Env> = { env, ctx, params: {}, query, cookie };
     const handler = composeMiddleware<Env>(middlewareStack, finalHandler);
     return handler(req, context);
   }
@@ -249,14 +249,6 @@ const matchTokens = (tokens: Token[], parts: string[]): Params | null => {
   return params;
 };
 
-const decode = (s: string): string => {
-  try {
-    return decodeURIComponent(s);
-  } catch {
-    return s;
-  }
-};
-
 const parseQueryString = (rawQueryString: string): QueryString => {
   const init: QueryString = {};
   if (!rawQueryString) return init;
@@ -298,4 +290,12 @@ const parseCookie = (rawCookie: string): Cookie => {
       return acc;
     }, init);
   return cookie;
+};
+
+const decode = (s: string): string => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
 };

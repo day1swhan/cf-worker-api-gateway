@@ -1,40 +1,54 @@
 import { type Middleware } from "../router";
 
-const ALLOW_ORIGINS = ["http://localhost:3000", "https://blog.day1swhan.com"];
-const ALLOW_METHODS = ["GET, POST, OPTIONS"];
-const ALLOW_HEADERS = ["Content-Type"];
+const ALLOW_ORIGINS = ["https://blog.day1swhan.com", "http://localhost:3000"];
+const ALLOW_METHODS = ["GET", "POST", "OPTIONS"] as const;
+const ALLOW_HEADERS = ["content-type"] as const;
 const ALLOW_CREDENTIALS = true;
 const MAX_AGE = 300;
-const VARY = ["Origin"];
+const VARY = ["Origin", "Accept-Encoding"];
 
-export const verifyOriginMiddleware: Middleware<Env> = (next) => async (req, context) => {
-  let origin = req.headers.get("origin") || "";
-  if (origin.length > 1 && origin.endsWith("/")) origin = origin.slice(0, -1);
+const getOrigin = (req: Request): string | null => {
+  const origin = req.headers.get("origin");
+  if (origin) return origin;
 
-  if (!ALLOW_ORIGINS.includes(origin)) {
-    return Response.json({ message: "Not Allowed Origin" }, { status: 403 });
+  const referer = req.headers.get("referer");
+  if (!referer) return null;
+
+  try {
+    return new URL(referer).origin;
+  } catch {
+    return null;
   }
+};
 
-  return next(req, context);
+const isAllowedOrigin = (origin: string | null): string | null => {
+  return origin && ALLOW_ORIGINS.includes(origin) ? origin : null;
 };
 
 export const corsMiddleware: Middleware<Env> = (next) => async (req, context) => {
-  let origin = req.headers.get("origin") || ALLOW_ORIGINS[0];
-  if (origin.length > 1 && origin.endsWith("/")) origin = origin.slice(0, -1);
+  const origin = getOrigin(req);
+  const allowOrigin = isAllowedOrigin(origin);
 
-  const params = {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": ALLOW_METHODS.join(", "),
-    "Access-Control-Allow-Headers": ALLOW_HEADERS.join(", "),
-    "Access-Control-Allow-Credentials": String(ALLOW_CREDENTIALS),
-    "Access-Control-Max-Age": String(MAX_AGE),
-    Vary: VARY.join(", "),
-  };
+  if (req.method.toUpperCase() === "OPTIONS") {
+    if (!allowOrigin) {
+      return Response.json({ message: "Origin Not Allowed" }, { status: 403 });
+    }
+
+    const res = new Response(null, { status: 204 });
+    res.headers.set("Access-Control-Allow-Origin", allowOrigin);
+    res.headers.set("Access-Control-Allow-Methods", ALLOW_METHODS.join(", "));
+    res.headers.set("Access-Control-Allow-Headers", ALLOW_HEADERS.join(", "));
+    res.headers.set("Access-Control-Allow-Credentials", String(ALLOW_CREDENTIALS));
+    res.headers.set("Access-Control-Max-Age", String(MAX_AGE));
+    res.headers.set("Vary", VARY.join(", "));
+    return res;
+  }
 
   const response = await next(req, context);
-
-  for (const [k, v] of Object.entries(params)) {
-    response.headers.set(k, v);
+  if (allowOrigin) {
+    response.headers.set("Access-Control-Allow-Origin", allowOrigin);
+    response.headers.set("Access-Control-Allow-Credentials", String(ALLOW_CREDENTIALS));
+    response.headers.set("Vary", VARY.join(", "));
   }
 
   return response;
