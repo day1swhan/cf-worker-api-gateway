@@ -1,5 +1,7 @@
 # cf-worker-api-gateway
 
+![Cover image for cf-worker-api-gateway](./public/cover.webp)
+
 ## Overview
 
 Cloudflare Workers를 이용해서 간단한 API Gateway를 만드는 도구를 소개합니다.
@@ -15,6 +17,12 @@ app.get("/", (req, context) => {
 
 export default app.export() satisfies ExportedHandler<Env>;
 ```
+
+기본적인 Workers 사용법과 활용 사례입니다.
+
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/articles/cloudflare-workers-01)
+
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/articles/cloudflare-workers-2)
 
 ## Features
 
