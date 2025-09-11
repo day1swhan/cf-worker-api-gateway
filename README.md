@@ -22,7 +22,7 @@ export default app.export() satisfies ExportedHandler<Env>;
 
 - [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/articles/cloudflare-workers-01)
 
-- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/articles/cloudflare-workers-2)
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/articles/cloudflare-workers-02)
 
 ## Features
 
