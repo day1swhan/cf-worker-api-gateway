@@ -1,4 +1,4 @@
-export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
+export type Method = "HEAD" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
 export type Params = Record<string, string>;
 export type QueryString = Record<string, string>;
 export type Cookie = Record<string, string>;
@@ -31,11 +31,11 @@ export class WorkerAPIGateway<Env> {
   private ignoreTrailingSlash = true;
   private onErrorHandler: ErrorHandler<Env> | null = null;
 
-  constructor(opts?: { ignoreTrailingSlash?: boolean }) {
-    if (opts && "ignoreTrailingSlash" in opts) this.ignoreTrailingSlash = !!opts.ignoreTrailingSlash;
-
-    const list = [requestIdMiddleware<Env>()];
-    this.middlewareStack.push({ prefix: "/", middlewares: list });
+  constructor() {
+    this.middlewareStack.push({
+      prefix: "/",
+      middlewares: [requestIdMiddleware<Env>()],
+    });
   }
 
   use(prefixOrMw: string | Middleware<Env>, ...middlewares: Middleware<Env>[]) {
@@ -57,6 +57,9 @@ export class WorkerAPIGateway<Env> {
     return this;
   }
 
+  head(path: string, handler: Handler<Env>, ...middlewares: Middleware<Env>[]) {
+    return this.add("HEAD", path, handler, middlewares);
+  }
   get(path: string, handler: Handler<Env>, ...middlewares: Middleware<Env>[]) {
     return this.add("GET", path, handler, middlewares);
   }
@@ -98,15 +101,15 @@ export class WorkerAPIGateway<Env> {
     const query = parseQueryString(rawQueryString);
     const cookie = parseCookie(req.headers.get("cookie") || "");
 
-    let methodMismatchAllow: Set<Method> | null = null;
+    let methodMismatch: Set<Method> | null = null;
 
     for (const route of this.routes) {
       const params = matchTokens(route.tokens, parts);
       if (!params) continue;
 
       if (route.method !== method) {
-        methodMismatchAllow ??= new Set();
-        methodMismatchAllow.add(route.method);
+        methodMismatch ??= new Set();
+        methodMismatch.add(route.method);
         continue;
       }
 
@@ -116,14 +119,14 @@ export class WorkerAPIGateway<Env> {
         .sort((a, b) => a.prefix.length - b.prefix.length)
         .flatMap((mw) => mw.middlewares);
 
-      const middlewareStack: Middleware<Env>[] = [...globalChain, ...route.middlewares];
+      const middlewares: Middleware<Env>[] = [...globalChain, ...route.middlewares];
 
       const context: Context<Env> = { env, ctx, params, query, cookie };
-      const finalHandler: Handler<Env> = async (req, context) => route.handler(req, context);
-      const handler = composeMiddleware<Env>(middlewareStack, finalHandler);
+      const userHandler: Handler<Env> = async (req, context) => route.handler(req, context);
+      const handler = composeMiddleware<Env>(middlewares, userHandler);
 
       try {
-        return await handler(req, context);
+        return handler(req, context);
       } catch (err) {
         if (this.onErrorHandler) {
           return await this.onErrorHandler(req, context, err);
@@ -133,29 +136,36 @@ export class WorkerAPIGateway<Env> {
       }
     }
 
-    const middlewareStack: Middleware<Env>[] = this.middlewareStack
+    const middlewares: Middleware<Env>[] = this.middlewareStack
       .filter((mw) => pathnameStartsWith(pathname, mw.prefix))
       .sort((a, b) => a.prefix.length - b.prefix.length)
       .flatMap((mw) => mw.middlewares);
 
-    let finalHandler: Handler<Env> = async (req, context) => {
-      const body = { message: "Not Found" };
-      return Response.json(body, { status: 404 });
-    };
-
-    if (methodMismatchAllow) {
-      finalHandler = async (req, context) => {
-        const body = { message: "Method Not Allowed" };
-        const headers = { Allow: [...methodMismatchAllow].join(", ") };
-        return Response.json(body, { status: 405, headers });
-      };
-    }
+    const finalHandler: Handler<Env> = methodMismatch
+      ? notAllowedHandler<Env>([...methodMismatch])
+      : notFoundHandler<Env>();
 
     const context: Context<Env> = { env, ctx, params: {}, query, cookie };
-    const handler = composeMiddleware<Env>(middlewareStack, finalHandler);
+    const handler = composeMiddleware<Env>(middlewares, finalHandler);
+
     return handler(req, context);
   }
 }
+
+const notFoundHandler =
+  <Env>(): Handler<Env> =>
+  async (req, context) => {
+    const body = { message: "Not Found" };
+    return Response.json(body, { status: 404 });
+  };
+
+const notAllowedHandler =
+  <Env>(methods: Method[]): Handler<Env> =>
+  async (req, context) => {
+    const body = { message: "Method Not Allowed" };
+    const headers = { Allow: methods.join(", ") };
+    return Response.json(body, { status: 405, headers });
+  };
 
 const composeMiddleware = <Env>(middlewares: Middleware<Env>[], finalHandler: Handler<Env>): Handler<Env> => {
   const handler = middlewares.reduceRight((next, middleware) => {

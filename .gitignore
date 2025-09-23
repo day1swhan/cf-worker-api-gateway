@@ -8,3 +8,4 @@ package-lock.json
 
 # custom
 dev/
+.DS_Store

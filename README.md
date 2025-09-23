@@ -18,7 +18,9 @@ app.get("/", (req, context) => {
 export default app.export() satisfies ExportedHandler<Env>;
 ```
 
-기본적인 Workers 사용법과 활용 사례입니다.
+내부 구조와 작동 방식에 대한 설명은 [Cloudflare Workers로 Express.js 스타일 API Gateway 프레임워크 만들기](https://blog.day1swhan.com/articles/cf-worker-api-gateway)에서 확인하실 수 있습니다.
+
+추가로 기본적인 Workers 사용법과 활용 사례는 아래에서 확인하실 수 있습니다.
 
 - [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/articles/cloudflare-workers-01)
 
@@ -27,7 +29,9 @@ export default app.export() satisfies ExportedHandler<Env>;
 ## Features
 
 - **미들웨어 지원**: 사용자의 HTTP request, response 요소들을 제어할 수 있습니다.
+
 - [Bindings 지원](https://developers.cloudflare.com/workers/runtime-apis/bindings/): R2, KV Store 같은 Cloudflare Developer Platform 자원들 사용 가능합니다.
+
 - [Context API 지원](https://developers.cloudflare.com/workers/runtime-apis/context/): waitUntil 함수를 이용해서 blocking 없이 응답을 제공하고, Worker 수명을 늘릴 수 있습니다.
 
 ## Quick Start
@@ -55,7 +59,7 @@ npm install && npm run types
 // index.ts
 import { WorkerAPIGateway } from "./router";
 
-const app = new WorkerAPIGateway<Env>({ ignoreTrailingSlash: true });
+const app = new WorkerAPIGateway<Env>();
 
 app.get("/", (req, context) => {
   return Response.json({ message: "hello world" });
@@ -75,8 +79,8 @@ export default app.export() satisfies ExportedHandler<Env>;
 npm run dev
 
 Your Worker has access to the following bindings:
-Binding                                   Resource          Mode
-env.KV_STORE_TEST (1234567890abcdef)      KV Namespace      local
+Binding                         Resource          Mode
+env.WORKERS_KV (123456789)      KV Namespace      local
 
 ⎔ Starting local server...
 [wrangler:info] Ready on http://localhost:8787
@@ -101,7 +105,7 @@ HTTP/1.1 200 OK
 
 미들웨어 함수는 **전역 미들웨어** → **라우터 미들웨어** → **최종 핸들러** 순으로 실행됩니다.
 
-`next` 함수를 이용해서 다음 미들웨어를 호출할 수 있으며, 동기, 비동기 함수 모두 지원합니다.
+`next` 함수를 이용해서 다음 미들웨어를 호출할 수 있으며, 동기 & 비동기 함수 모두 지원합니다.
 
 `prefix` 기반으로 미들웨어 호출 여부를 제어할 수 있고, prefix 없이 호출된 미들웨어는 전역 미들웨어("/")로 작동합니다.
 
@@ -125,7 +129,7 @@ app.use("/", middlewareB);
 
 app.get("/", (req, context) => {
   console.log("finalHandler");
-  return Response.json({ message: "hello world" });
+  return Response.json({ message: "Hello World" });
 });
 
 export default app.export() satisfies ExportedHandler<Env>;
@@ -136,10 +140,11 @@ curl -i http://localhost:8787
 
 HTTP/1.1 200 OK
 ...
+{"message":"Hello World"}
 ```
 
 ```sh
-# console.log()
+# console.log
 middlewareA
 middlewareB
 finalHandler
@@ -147,9 +152,9 @@ finalHandler
 
 ## Error Handling
 
-라우팅 핸들러 오류 발생 시 기본적으로 500 Internal Server Error 응답을 반환합니다.
+라우팅 핸들러 오류 발생 시 기본적으로 `500 Internal Server Error` 응답을 반환합니다.
 
-`onError` 함수를 이용해서 사용자 정의 함수로 응답할 수 있습니다.
+`onError` 함수를 이용하면 사용자 정의 함수로 응답할 수 있습니다.
 
 ```ts
 app.onError((req, context, err) => {

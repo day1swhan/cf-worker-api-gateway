@@ -1,7 +1,7 @@
 import { WorkerAPIGateway } from "./router";
 import { corsMiddleware } from "./middleware";
 
-const app = new WorkerAPIGateway<Env>({ ignoreTrailingSlash: true });
+const app = new WorkerAPIGateway<Env>();
 
 app.use("/user", corsMiddleware);
 
@@ -15,7 +15,7 @@ app.get("/user/:id", (req, context) => {
 });
 
 app.post("/user/:id", (req, context) => {
-  return Response.json("Success!");
+  return Response.json({ message: "Success!" });
 });
 
 app.onError((req, context, err) => {
