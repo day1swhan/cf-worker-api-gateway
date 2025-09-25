@@ -1,21 +1,21 @@
-export type Method = "HEAD" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
-export type Params = Record<string, string>;
-export type QueryString = Record<string, string>;
-export type Cookie = Record<string, string>;
-export type Token = { type: "static"; value: string } | { type: "param"; name: string };
+type Method = "HEAD" | "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS";
+type Params = Record<string, string>;
+type QueryString = Record<string, string>;
+type Cookie = Record<string, string>;
+type Token = { type: "static"; value: string } | { type: "param"; name: string };
 
-export type CFContext<Env = unknown> = { env: Env; ctx: ExecutionContext };
-export type WorkerAPIGatewayContext = { params: Params; query: QueryString; cookie: Cookie };
-export type Context<Env = unknown> = CFContext<Env> & WorkerAPIGatewayContext;
+type CFContext<Env = unknown> = { env: Env; ctx: ExecutionContext };
+type WorkerAPIGatewayContext = { params: Params; query: QueryString; cookie: Cookie };
+
+type Context<Env = unknown> = CFContext<Env> & WorkerAPIGatewayContext;
+type Handler<Env = unknown> = (req: Request, context: Context<Env>) => Response | Promise<Response>;
+type ErrorHandler<Env = unknown> = (req: Request, context: Context<Env>, error: any) => Response | Promise<Response>;
+
 export type Middleware<Env = unknown> = (next: Handler<Env>) => Handler<Env>;
-export type Handler<Env = unknown> = (req: Request, context: Context<Env>) => Response | Promise<Response>;
-export type ErrorHandler<Env = unknown> = (
-  req: Request,
-  context: Context<Env>,
-  error: any
-) => Response | Promise<Response>;
 
-export type Router<Env> = {
+type MiddlewareWithPrefix<Env> = { prefix: string; middlewares: Middleware<Env>[] };
+
+type Router<Env> = {
   method: Method;
   pathname: string;
   tokens: Token[];
@@ -23,7 +23,9 @@ export type Router<Env> = {
   handler: Handler<Env>;
 };
 
-export type MiddlewareWithPrefix<Env> = { prefix: string; middlewares: Middleware<Env>[] };
+export type WorkerAPIGatewayConfig = {
+  extended?: boolean;
+};
 
 export class WorkerAPIGateway<Env> {
   private routes: Router<Env>[] = [];
@@ -31,11 +33,10 @@ export class WorkerAPIGateway<Env> {
   private ignoreTrailingSlash = true;
   private onErrorHandler: ErrorHandler<Env> | null = null;
 
-  constructor() {
-    this.middlewareStack.push({
-      prefix: "/",
-      middlewares: [requestIdMiddleware<Env>()],
-    });
+  constructor(config: WorkerAPIGatewayConfig = {}) {
+    if (config.extended) {
+      this.middlewareStack.push({ prefix: "/", middlewares: [defaultMiddleware<Env>()] });
+    }
   }
 
   use(prefixOrMw: string | Middleware<Env>, ...middlewares: Middleware<Env>[]) {
@@ -174,7 +175,7 @@ const composeMiddleware = <Env>(middlewares: Middleware<Env>[], finalHandler: Ha
   return handler;
 };
 
-const requestIdMiddleware =
+const defaultMiddleware =
   <Env>(): Middleware<Env> =>
   (next) =>
   async (req, context) => {

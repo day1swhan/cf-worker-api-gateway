@@ -9,22 +9,22 @@ Cloudflare Workers를 이용해서 간단한 API Gateway를 만드는 도구를 
 ```ts
 import { WorkerAPIGateway } from "./router";
 
-const app = new WorkerAPIGateway<Env>();
+const app = new WorkerAPIGateway<Env>({ extended: true });
 
 app.get("/", (req, context) => {
-  return Response.json({ message: "hello world" });
+  return Response.json({ message: "Hello World!" });
 });
 
-export default app.export() satisfies ExportedHandler<Env>;
+export default app.export();
 ```
 
-내부 구조와 작동 방식에 대한 설명은 [Cloudflare Workers로 Express.js 스타일 API Gateway 프레임워크 만들기](https://blog.day1swhan.com/articles/cf-worker-api-gateway)에서 확인하실 수 있습니다.
+Router, Middleware, Handler 요소들이 내부적으로 어떻게 구성되어서 작동하는지 궁금하신 분들은 [Cloudflare Workers로 Express.js 스타일 API Gateway 프레임워크 개발기](https://blog.day1swhan.com/articles/cf-worker-api-gateway?utm_source=github&utm_medium=referral)에서 보실 수 있습니다.
 
-추가로 기본적인 Workers 사용법과 활용 사례는 아래에서 확인하실 수 있습니다.
+추가로 기본적인 Workers & KV 사용법과 활용 사례는 아래에서 확인하실 수 있습니다.
 
-- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/articles/cloudflare-workers-01)
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (1/2)](https://blog.day1swhan.com/articles/cloudflare-workers-01?utm_source=github&utm_medium=referral)
 
-- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/articles/cloudflare-workers-02)
+- [Cloudflare Workers & KV 이용해서 서버리스 방문자 카운팅 API 만들기 (2/2)](https://blog.day1swhan.com/articles/cloudflare-workers-02?utm_source=github&utm_medium=referral)
 
 ## Features
 
@@ -47,6 +47,8 @@ cd cf-worker-api-gateway
 
 필요 모듈 설치, 타입 생성
 
+참고) KV Store 필요 없으신 분들은 `wrangler.jsonc` 파일에서 `kv_namespaces` 부분 지워주시면 됩니다.
+
 ```sh
 npm install && npm run types
 ```
@@ -59,7 +61,7 @@ npm install && npm run types
 // index.ts
 import { WorkerAPIGateway } from "./router";
 
-const app = new WorkerAPIGateway<Env>();
+const app = new WorkerAPIGateway<Env>({ extended: true });
 
 app.get("/", (req, context) => {
   return Response.json({ message: "hello world" });
@@ -70,7 +72,7 @@ app.get("/user/:id", (req, context) => {
   return Response.json({ params, query, cookie });
 });
 
-export default app.export() satisfies ExportedHandler<Env>;
+export default app.export();
 ```
 
 개발 모드 실행

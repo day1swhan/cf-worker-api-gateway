@@ -1,7 +1,7 @@
 import { WorkerAPIGateway } from "./router";
 import { corsMiddleware } from "./middleware";
 
-const app = new WorkerAPIGateway<Env>();
+const app = new WorkerAPIGateway<Env>({ extended: true });
 
 app.use("/user", corsMiddleware);
 
@@ -23,4 +23,4 @@ app.onError((req, context, err) => {
   return Response.json({ message: "Bad Request" }, { status: 400 });
 });
 
-export default app.export() satisfies ExportedHandler<Env>;
+export default app.export();
