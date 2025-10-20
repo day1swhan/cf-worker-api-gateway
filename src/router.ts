@@ -35,7 +35,7 @@ export class WorkerAPIGateway<Env> {
 
   constructor(config: WorkerAPIGatewayConfig = {}) {
     if (config.extended) {
-      this.middlewareStack.push({ prefix: "/", middlewares: [defaultMiddleware<Env>()] });
+      this.middlewareStack.push({ prefix: "/", middlewares: [requestIdMiddleware<Env>()] });
     }
   }
 
@@ -175,7 +175,7 @@ const composeMiddleware = <Env>(middlewares: Middleware<Env>[], finalHandler: Ha
   return handler;
 };
 
-const defaultMiddleware =
+const requestIdMiddleware =
   <Env>(): Middleware<Env> =>
   (next) =>
   async (req, context) => {
@@ -184,16 +184,22 @@ const defaultMiddleware =
     const requestId = "x-request-id";
     const uuid = crypto.randomUUID();
 
-    const headers = new Headers(req.headers);
-    headers.set(requestId, uuid);
+    const req_headers = new Headers(req.headers);
+    req_headers.set(requestId, uuid);
 
-    const request = new Request(req, { headers });
-    const response = await next(request, context);
+    const request = new Request(req, { headers: req_headers });
+    const upstream = await next(request, context);
 
-    response.headers.set(requestId, uuid);
-    response.headers.set("x-powered-by", "day1swhan");
-    response.headers.set("x-duration-ms", (Date.now() - start).toString());
-    return response;
+    const res_headers = new Headers(upstream.headers);
+    res_headers.set(requestId, uuid);
+    res_headers.set("x-powered-by", "day1swhan");
+    res_headers.set("x-duration-ms", (Date.now() - start).toString());
+
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: res_headers,
+    });
   };
 
 const tokenize = (path: string): Token[] => {
